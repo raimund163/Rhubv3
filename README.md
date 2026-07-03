@@ -2,267 +2,167 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local CoreGui = game:GetService("CoreGui")
-local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- [[ DEFINIÇÃO DE CORES E ESTILOS ]] --
-local UI_THEME = {
-    Background = Color3.fromRGB(18, 18, 20),
-    Sidebar = Color3.fromRGB(24, 24, 28),
-    Accent = Color3.fromRGB(0, 162, 255),
-    AccentHover = Color3.fromRGB(0, 130, 200),
-    TextActive = Color3.fromRGB(255, 255, 255),
-    TextMuted = Color3.fromRGB(150, 150, 160),
-    ButtonBg = Color3.fromRGB(32, 32, 38),
-    ButtonHover = Color3.fromRGB(40, 40, 48),
-    Border = Color3.fromRGB(40, 40, 45)
-}
-
--- [[ CONFIGURAÇÕES GERAIS ]] --
+-- [[ CONFIGURAÇÕES GERAIS (ESTADO DA GUI) ]] --
 local Settings = {
     AimbotEnabled = false,
     TeamCheck = false,
     WallCheck = false,
     Prediction = false,
-    PredictionFactor = 0.145, -- Tempo estimado de projétil/ping para cálculo físico
     FovRadius = 100,
-    TargetPart = "Head", -- "Head" (Cabeça), "Torso" (Tronco), "LeftFoot" (Pé)
+    TargetPart = "Head", -- Head, Torso/UpperTorso, LeftFoot
     
     EspEnabled = false,
     EspBox = false,
     EspHealth = false,
-    EspSkeleton = false,
-    RigType = "R15" -- "R15" ou "R6"
+    RigType = "R15"
 }
 
--- [[ CRIAÇÃO DA ESTRUTURA DA GUI ]] --
+-- [[ CRIAÇÃO DA GUI ]] --
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "PremiumCheatGUI_V2"
+ScreenGui.Name = "CustomCheatGui"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Injeção segura na CoreGui ou PlayerGui
-local success, _ = pcall(function()
-    ScreenGui.Parent = CoreGui
+-- Tenta colocar na CoreGui para segurança, se não conseguir vai para PlayerGui
+local success, err = pcall(function()
+    ScreenGui.Parent = game:GetService("CoreGui")
 end)
 if not success then
     ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
--- Botão Flutuante para Abrir/Fechar a Interface
+-- Botão de Abrir / Fechar
 local ToggleButton = Instance.new("TextButton")
-ToggleButton.Name = "MenuToggle"
-ToggleButton.Size = UDim2.new(0, 140, 0, 42)
-ToggleButton.Position = UDim2.new(0, 25, 0, 25)
-ToggleButton.BackgroundColor3 = UI_THEME.Sidebar
-ToggleButton.BorderSizePixel = 0
-ToggleButton.Text = "Menu: Ativo"
-ToggleButton.TextColor3 = UI_THEME.TextActive
+ToggleButton.Size = UDim2.new(0, 120, 0, 40)
+ToggleButton.Position = UDim2.new(0, 20, 0, 20)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.Text = "Menu: ON"
 ToggleButton.Font = Enum.Font.SourceSansBold
-ToggleButton.TextSize = 15
+ToggleButton.TextSize = 16
 ToggleButton.Parent = ScreenGui
 
-local ToggleCorner = Instance.new("UICorner")
-ToggleCorner.CornerRadius = UDim.new(0, 8)
-ToggleCorner.Parent = ToggleButton
-
 local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 580, 0, 380)
-MainFrame.Position = UDim2.new(0.5, -290, 0.5, -190)
-MainFrame.BackgroundColor3 = UI_THEME.Background
+MainFrame.Size = UDim2.new(0, 550, 0, 350)
+MainFrame.Position = UDim2.new(0.5, -275, 0.5, -175)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MainFrame.BorderSizePixel = 0
 MainFrame.Visible = true
 MainFrame.Parent = ScreenGui
 
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 10)
-MainCorner.Parent = MainFrame
-
--- Sistema de Arrastar com Efeito Suave (Smooth Drag)
+-- Sistema de Arrastar a GUI
 local dragging, dragInput, dragStart, startPos
-local function updateDrag(input)
-    local delta = input.Position - dragStart
-    local targetPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    TweenService:Create(MainFrame, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = targetPos}):Play()
-end
-
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
         dragStart = input.Position
         startPos = MainFrame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
     end
 end)
-
 MainFrame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        dragInput = input
-    end
+    if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
 end)
-
 UserInputService.InputChanged:Connect(function(input)
     if input == dragInput and dragging then
-        updateDrag(input)
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
 end)
 
 ToggleButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
-    ToggleButton.Text = MainFrame.Visible and "Menu: Ativo" or "Menu: Oculto"
+    ToggleButton.Text = MainFrame.Visible and "Menu: ON" or "Menu: OFF"
 end)
 
--- Painel Lateral Esquerdo (Menu de Navegação)
-local Sidebar = Instance.new("Frame")
-Sidebar.Name = "Sidebar"
-Sidebar.Size = UDim2.new(0, 160, 1, 0)
-Sidebar.BackgroundColor3 = UI_THEME.Sidebar
-Sidebar.BorderSizePixel = 0
-Sidebar.Parent = MainFrame
+-- Painéis da GUI
+local LeftPanel = Instance.new("Frame")
+LeftPanel.Size = UDim2.new(0, 150, 1, 0)
+LeftPanel.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+LeftPanel.BorderSizePixel = 0
+LeftPanel.Parent = MainFrame
 
-local SidebarCorner = Instance.new("UICorner")
-SidebarCorner.CornerRadius = UDim.new(0, 10)
-SidebarCorner.Parent = Sidebar
+local RightPanel = Instance.new("Frame")
+RightPanel.Size = UDim2.new(1, -150, 1, 0)
+RightPanel.Position = UDim2.new(0, 150, 0, 0)
+RightPanel.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+RightPanel.BorderSizePixel = 0
+RightPanel.Parent = MainFrame
 
--- Obstruir cantos direitos do painel lateral para manter o design clean
-local SidebarPatch = Instance.new("Frame")
-SidebarPatch.Size = UDim2.new(0, 10, 1, 0)
-SidebarPatch.Position = UDim2.new(1, -10, 0, 0)
-SidebarPatch.BackgroundColor3 = UI_THEME.Sidebar
-SidebarPatch.BorderSizePixel = 0
-SidebarPatch.Parent = Sidebar
-
--- Logo / Título do Menu
-local LogoLabel = Instance.new("TextLabel")
-LogoLabel.Size = UDim2.new(1, 0, 0, 50)
-LogoLabel.BackgroundTransparency = 1
-LogoLabel.Text = "PREMIUM CHEAT"
-LogoLabel.TextColor3 = UI_THEME.Accent
-LogoLabel.Font = Enum.Font.SourceSansBold
-LogoLabel.TextSize = 18
-LogoLabel.Parent = Sidebar
-
--- Painel Conteúdo Direito
-local ContentFrame = Instance.new("Frame")
-ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -160, 1, 0)
-ContentFrame.Position = UDim2.new(0, 160, 0, 0)
-ContentFrame.BackgroundTransparency = 1
-ContentFrame.Parent = MainFrame
-
--- Avatar de Noob Estilizado
-local NoobContainer = Instance.new("Frame")
-NoobContainer.Size = UDim2.new(0, 110, 0, 110)
-NoobContainer.Position = UDim2.new(1, -130, 0, 20)
-NoobContainer.BackgroundColor3 = UI_THEME.Sidebar
-NoobContainer.BorderSizePixel = 0
-NoobContainer.Parent = ContentFrame
-
-local NoobCorner = Instance.new("UICorner")
-NoobCorner.CornerRadius = UDim.new(0, 12)
-NoobCorner.Parent = NoobContainer
-
+-- Avatar de Noob na Direita
 local NoobAvatar = Instance.new("ImageLabel")
-NoobAvatar.Size = UDim2.new(1, -10, 1, -10)
-NoobAvatar.Position = UDim2.new(0, 5, 0, 5)
+NoobAvatar.Size = UDim2.new(0, 90, 0, 90)
+NoobAvatar.Position = UDim2.new(1, -110, 0, 20)
 NoobAvatar.BackgroundTransparency = 1
-NoobAvatar.Image = "rbxassetid://134149021" -- ID de Recurso Clássico Noob do Roblox
-NoobAvatar.Parent = NoobContainer
+NoobAvatar.Image = "rbxassetid://134149021"
+NoobAvatar.Parent = RightPanel
 
--- Título da Página de Configuração Dinâmica
-local PageTitle = Instance.new("TextLabel")
-PageTitle.Size = UDim2.new(1, -160, 0, 40)
-PageTitle.Position = UDim2.new(0, 20, 0, 15)
-PageTitle.BackgroundTransparency = 1
-PageTitle.Text = "Menu Principal"
-PageTitle.TextColor3 = UI_THEME.TextActive
-PageTitle.Font = Enum.Font.SourceSansBold
-PageTitle.TextSize = 22
-PageTitle.TextAlign = Enum.TextAlign.Left
-PageTitle.Parent = ContentFrame
+local SectionTitle = Instance.new("TextLabel")
+SectionTitle.Size = UDim2.new(1, -20, 0, 30)
+SectionTitle.Position = UDim2.new(0, 10, 0, 10)
+SectionTitle.BackgroundTransparency = 1
+SectionTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+SectionTitle.Text = "Configurações Globais"
+SectionTitle.Font = Enum.Font.SourceSansBold
+SectionTitle.TextSize = 18
+SectionTitle.TextAlign = Enum.TextAlign.Left
+SectionTitle.Parent = RightPanel
 
--- Containers para Alternar Abas (Aimbot / ESP)
-local AimbotPage = Instance.new("Frame")
-AimbotPage.Size = UDim2.new(1, 0, 1, -60)
-AimbotPage.Position = UDim2.new(0, 0, 0, 60)
-AimbotPage.BackgroundTransparency = 1
-AimbotPage.Visible = true
-AimbotPage.Parent = ContentFrame
-
-local EspPage = Instance.new("Frame")
-EspPage.Size = UDim2.new(1, 0, 1, -60)
-EspPage.Position = UDim2.new(0, 0, 0, 60)
-EspPage.BackgroundTransparency = 1
-EspPage.Visible = false
-EspPage.Parent = ContentFrame
-
--- [[ DRAWING API (VETORES DO FOV E SNAPLINE) ]] --
+-- [[ DRAWING API (FOV E LINHA) ]] --
 local FovCircle = Drawing.new("Circle")
-FovCircle.Color = Color3.fromRGB(0, 162, 255)
-FovCircle.Thickness = 1.2
+FovCircle.Color = Color3.fromRGB(255, 0, 0)
+FovCircle.Thickness = 1
 FovCircle.NumSides = 64
 FovCircle.Radius = Settings.FovRadius
 FovCircle.Filled = false
 FovCircle.Visible = true
 
 local SnapLine = Drawing.new("Line")
-SnapLine.Color = Color3.fromRGB(255, 235, 59)
+SnapLine.Color = Color3.fromRGB(255, 255, 0)
 SnapLine.Thickness = 1.5
 SnapLine.Visible = false
 
--- [[ MÓDULO MATEMÁTICO DO AIMBOT ]] --
-local function GetClosestTarget()
+-- [[ LÓGICA DE ALVO DO AIMBOT ]] --
+local function GetClosestPlayer()
     local closestPlayer = nil
     local shortestDistance = math.huge
 
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
-            -- Mapeamento inteligente de esqueleto R15/R6
+            -- Valida a parte do corpo com base no Rig
             local partName = Settings.TargetPart
-            if partName == "Torso" then
-                partName = player.Character:FindFirstChild("UpperTorso") and "UpperTorso" or "Torso"
-            elseif partName == "LeftFoot" then
-                partName = player.Character:FindFirstChild("LeftFoot") and "LeftFoot" or "Left Leg"
+            if partName == "Torso" and player.Character:FindFirstChild("UpperTorso") then
+                partName = "UpperTorso"
             end
-
+            
             local targetPart = player.Character:FindFirstChild(partName)
             local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-
+            
             if targetPart and humanoid and humanoid.Health > 0 then
-                -- Verificação de Equipa (Team Check)
                 if Settings.TeamCheck and player.Team == LocalPlayer.Team then continue end
-
+                
                 local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
-
+                
                 if onScreen then
-                    -- Verificação de Linha de Visão / Paredes (Wall Check via Raycast)
                     if Settings.WallCheck then
                         local raycastParams = RaycastParams.new()
                         raycastParams.FilterType = Enum.RaycastFilterType.Exclude
                         raycastParams.FilterDescendantsInstances = {LocalPlayer.Character, player.Character}
-                        
-                        local raycastResult = workspace:Raycast(
-                            Camera.CFrame.Position, 
-                            targetPart.Position - Camera.CFrame.Position, 
-                            raycastParams
-                        )
-                        if raycastResult then continue end -- Bloqueado por obstáculo
+                        local raycastResult = workspace:Raycast(Camera.CFrame.Position, targetPart.Position - Camera.CFrame.Position, raycastParams)
+                        if raycastResult then continue end 
                     end
-
-                    -- Distância Bidimensional em relação ao Cursor
+                    
                     local mousePos = UserInputService:GetMouseLocation()
-                    local distanceToCursor = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
-
-                    if distanceToCursor < shortestDistance and distanceToCursor <= Settings.FovRadius then
+                    local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+                    
+                    if distance < shortestDistance and distance <= Settings.FovRadius then
                         closestPlayer = player
-                        shortestDistance = distanceToCursor
+                        shortestDistance = distance
                     end
                 end
             end
@@ -271,38 +171,32 @@ local function GetClosestTarget()
     return closestPlayer
 end
 
--- Loop de Atualização do Aimbot e Mecânica de Linha de Fov
+-- Loop do Aimbot e Trava de Mira (Botão Direito do Mouse)
 RunService.RenderStepped:Connect(function()
     local mousePos = UserInputService:GetMouseLocation()
     FovCircle.Position = mousePos
     FovCircle.Radius = Settings.FovRadius
-
+    
     if Settings.AimbotEnabled then
-        local target = GetClosestTarget()
+        local target = GetClosestPlayer()
         if target and target.Character then
             local partName = Settings.TargetPart
-            if partName == "Torso" then
-                partName = target.Character:FindFirstChild("UpperTorso") and "UpperTorso" or "Torso"
-            elseif partName == "LeftFoot" then
-                partName = target.Character:FindFirstChild("LeftFoot") and "LeftFoot" or "Left Leg"
-            end
-
+            if partName == "Torso" and target.Character:FindFirstChild("UpperTorso") then partName = "UpperTorso" end
+            
             local part = target.Character:FindFirstChild(partName)
             if part then
                 local targetPosition = part.Position
-
-                -- Previsão Física de Movimento (Prediction Engine)
+                
                 if Settings.Prediction and target.Character:FindFirstChild("HumanoidRootPart") then
-                    local velocity = target.Character.HumanoidRootPart.AssemblyLinearVelocity
-                    targetPosition = targetPosition + (velocity * Settings.PredictionFactor)
+                    targetPosition = targetPosition + (target.Character.HumanoidRootPart.AssemblyLinearVelocity * 0.145)
                 end
-
-                -- Travamento Automático da Mira (Ao manter pressionado o Botão Direito do Mouse)
+                
+                -- Se segurar o botão direito do mouse, trava a câmera
                 if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
                     Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPosition)
                 end
-
-                -- Linha de Tração Dinâmica do FOV até o Alvo (Snapline)
+                
+                -- Linha saindo do fov até a cabeça/alvo (Apenas se o inimigo estiver visível no wall check)
                 local screenPos, _ = Camera:WorldToViewportPoint(targetPosition)
                 SnapLine.From = mousePos
                 SnapLine.To = Vector2.new(screenPos.X, screenPos.Y)
@@ -318,175 +212,164 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- [[ SISTEMA AVANÇADO DE VISUAIS (ESP ENGINE) ]] --
-local function CreatePlayerESP(player)
-    -- Elementos do Desenho
+-- [[ SISTEMA ESP COM BOX DINÂMICA ]] --
+local function CreateEsp(player)
     local Box = Drawing.new("Square")
     Box.Visible = false
-    Box.Color = Color3.fromRGB(255, 40, 40)
-    Box.Thickness = 1.5
+    Box.Color = Color3.fromRGB(255, 0, 0)
+    Box.Thickness = 15 -- Espessura visível
     Box.Filled = false
-
-    local HealthBar = Drawing.new("Line")
-    HealthBar.Visible = false
-    HealthBar.Color = Color3.fromRGB(0, 255, 100)
-    HealthBar.Thickness = 2.5
 
     local HealthText = Drawing.new("Text")
     HealthText.Visible = false
-    HealthText.Color = Color3.fromRGB(255, 255, 255)
-    HealthText.Size = 13
-    HealthText.Center = true
+    HealthText.Color = Color3.fromRGB(0, 255, 0)
+    HealthText.Size = 14
+    HealthText.Center = false
     HealthText.Outline = true
-
-    -- Mapeamento de Esqueletos para R6/R15
-    local SkeletonLines = {}
-    local maxSkeletonBones = 16
-    for i = 1, maxSkeletonBones do
-        local line = Drawing.new("Line")
-        line.Color = Color3.fromRGB(255, 255, 255)
-        line.Thickness = 1.0
-        line.Visible = false
-        table.insert(SkeletonLines, line)
-    end
 
     local connection
     connection = RunService.RenderStepped:Connect(function()
         if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChildOfClass("Humanoid") and player.Character:FindFirstChildOfClass("Humanoid").Health > 0 and player ~= LocalPlayer then
             if Settings.EspEnabled then
                 local hrp = player.Character.HumanoidRootPart
-                local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
                 local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-
+                
                 if onScreen then
-                    -- Dimensionamento Dinâmico Inteligente com base na Distância (Perto, Médio, Longe)
+                    -- Tamanho baseado na distância (Perto, Médio, Longe)
                     local distance = (Camera.CFrame.Position - hrp.Position).Magnitude
-                    local factor = math.clamp(1000 / distance, 4, 120)
-                    local width = 45 * factor
-                    local height = 65 * factor
+                    local sizeModifier = math.clamp(1000 / distance, 5, 150)
+                    local boxWidth = 40 * sizeModifier
+                    local boxHeight = 60 * sizeModifier
 
-                    local boxTopLeft = Vector2.new(screenPos.X - width/2, screenPos.Y - height/2)
-
-                    -- Renderização da Caixa ESP
                     if Settings.EspBox then
-                        Box.Size = Vector2.new(width, height)
-                        Box.Position = boxTopLeft
+                        Box.Size = Vector2.new(boxWidth, boxHeight)
+                        Box.Position = Vector2.new(screenPos.X - boxWidth / 2, screenPos.Y - boxHeight / 2)
                         Box.Visible = true
                     else
                         Box.Visible = false
                     end
 
-                    -- Barra e Texto de Vida no Lado Esquerdo da Box
                     if Settings.EspHealth then
-                        local hpPercent = humanoid.Health / humanoid.MaxHealth
-                        local barHeight = height * hpPercent
-                        
-                        HealthBar.From = Vector2.new(boxTopLeft.X - 6, boxTopLeft.Y + height)
-                        HealthBar.To = Vector2.new(boxTopLeft.X - 6, boxTopLeft.Y + height - barHeight)
-                        HealthBar.Color = Color3.fromRGB(255 * (1 - hpPercent), 255 * hpPercent, 0)
-                        HealthBar.Visible = true
-
-                        HealthText.Text = math.floor(humanoid.Health) .. " HP"
-                        HealthText.Position = Vector2.new(boxTopLeft.X - 25, boxTopLeft.Y + (height/2) - 6)
+                        HealthText.Text = "HP: " .. math.floor(player.Character:FindFirstChildOfClass("Humanoid").Health)
+                        HealthText.Position = Vector2.new(screenPos.X - (boxWidth / 2) - 45, screenPos.Y - (boxHeight / 2))
                         HealthText.Visible = true
                     else
-                        HealthBar.Visible = false
                         HealthText.Visible = false
-                    end
-
-                    -- Motor de Desenho de Esqueleto Integrado (R6 vs R15)
-                    if Settings.EspSkeleton then
-                        local rig = player.Character
-                        local bones = {}
-
-                        if Settings.RigType == "R15" then
-                            local jointNames = {
-                                {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
-                                {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
-                                {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"},
-                                {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
-                                {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"}
-                            }
-                            for _, joint in ipairs(jointNames) do
-                                if rig:FindFirstChild(joint[1]) and rig:FindFirstChild(joint[2]) then
-                                    table.insert(bones, {rig[joint[1]].Position, rig[joint[2]].Position})
-                                end
-                            end
-                        else -- Esquema R6
-                            local jointNames = {
-                                {"Head", "Torso"},
-                                {"Torso", "Left Arm"}, {"Torso", "Right Arm"},
-                                {"Torso", "Left Leg"}, {"Torso", "Right Leg"}
-                            }
-                            for _, joint in ipairs(jointNames) do
-                                if rig:FindFirstChild(joint[1]) and rig:FindFirstChild(joint[2]) then
-                                    table.insert(bones, {rig[joint[1]].Position, rig[joint[2]].Position})
-                                end
-                            end
-                        end
-
-                        -- Plotagem de Linhas do Esqueleto
-                        for idx, line in ipairs(SkeletonLines) do
-                            local bonePair = bones[idx]
-                            if bonePair then
-                                local posA, onScreenA = Camera:WorldToViewportPoint(bonePair[1])
-                                local posB, onScreenB = Camera:WorldToViewportPoint(bonePair[2])
-                                if onScreenA and onScreenB then
-                                    line.From = Vector2.new(posA.X, posA.Y)
-                                    line.To = Vector2.new(posB.X, posB.Y)
-                                    line.Visible = true
-                                else
-                                    line.Visible = false
-                                end
-                            else
-                                line.Visible = false
-                            end
-                        end
-                    else
-                        for _, line in ipairs(SkeletonLines) do line.Visible = false end
                     end
                 else
                     Box.Visible = false
-                    HealthBar.Visible = false
                     HealthText.Visible = false
-                    for _, line in ipairs(SkeletonLines) do line.Visible = false end
                 end
             else
                 Box.Visible = false
-                HealthBar.Visible = false
                 HealthText.Visible = false
-                for _, line in ipairs(SkeletonLines) do line.Visible = false end
             end
         else
             Box.Visible = false
-            HealthBar.Visible = false
             HealthText.Visible = false
-            for _, line in ipairs(SkeletonLines) do line.Visible = false end
             if not player.Parent then
                 Box:Remove()
-                HealthBar:Remove()
                 HealthText:Remove()
-                for _, line in ipairs(SkeletonLines) do line:Remove() end
                 connection:Disconnect()
             end
         end
     end)
 end
 
-Players.PlayerAdded:Connect(CreatePlayerESP)
-for _, p in pairs(Players:GetPlayers()) do CreatePlayerESP(p) end
+Players.PlayerAdded:Connect(CreateEsp)
+for _, p in pairs(Players:GetPlayers()) do CreateEsp(p) end
 
--- [[ SISTEMA DE CONSTRUÇÃO DE INTERFACE DO CONTEÚDO ]] --
-local function CreateButton(text, pos, size, parent, callback)
+-- [[ INTERATIVIDADE DOS BOTÕES ]] --
+local function CreateSubButton(text, pos, parent, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = size
+    btn.Size = UDim2.new(0, 130, 0, 30)
     btn.Position = pos
-    btn.BackgroundColor3 = UI_THEME.ButtonBg
-    btn.TextColor3 = UI_THEME.TextMuted
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Text = text
-    btn.Font = Enum.Font.SourceSansBold
+    btn.Font = Enum.Font.SourceSans
     btn.TextSize = 14
-    btn.BorderSizePixel = 0
     btn.Parent = parent
+    btn.MouseButton1Click:Connect(function()
+        callback(btn)
+    end)
+    return btn
+end
 
-    local corner = Instance.new("UIC
+-- Alternar Abas
+CreateSubButton("Aimbot Menu", UDim2.new(0, 10, 0, 20), LeftPanel, function() SectionTitle.Text = "Configurações de Aimbot" end)
+CreateSubButton("ESP Menu", UDim2.new(0, 10, 0, 60), LeftPanel, function() SectionTitle.Text = "Configurações de Visuais (ESP)" end)
+
+-- Botões de Função (Aimbot)
+local AimBtn = CreateSubButton("Aimbot: OFF", UDim2.new(0, 10, 0, 50), RightPanel, function(b)
+    Settings.AimbotEnabled = not Settings.AimbotEnabled
+    b.Text = Settings.AimbotEnabled and "Aimbot: ON" or "Aimbot: OFF"
+end)
+
+local TeamBtn = CreateSubButton("Team Check: OFF", UDim2.new(0, 10, 0, 90), RightPanel, function(b)
+    Settings.TeamCheck = not Settings.TeamCheck
+    b.Text = Settings.TeamCheck and "Team Check: ON" or "Team Check: OFF"
+end)
+
+local WallBtn = CreateSubButton("Wall Check: OFF", UDim2.new(0, 10, 0, 130), RightPanel, function(b)
+    Settings.WallCheck = not Settings.WallCheck
+    b.Text = Settings.WallCheck and "Wall Check: ON" or "Wall Check: OFF"
+end)
+
+local PredBtn = CreateSubButton("Previsão: OFF", UDim2.new(0, 10, 0, 170), RightPanel, function(b)
+    Settings.Prediction = not Settings.Prediction
+    b.Text = Settings.Prediction and "Previsão: ON" or "Previsão: OFF"
+end)
+
+-- Modificadores de FOV (+ e -)
+local FovLabel = Instance.new("TextLabel")
+FovLabel.Size = UDim2.new(0, 100, 0, 30)
+FovLabel.Position = UDim2.new(0, 10, 0, 210)
+FovLabel.Text = "FOV: " .. Settings.FovRadius
+FovLabel.TextColor3 = Color3.fromRGB(255,255,255)
+FovLabel.BackgroundTransparency = 1
+FovLabel.Parent = RightPanel
+
+CreateSubButton("+", UDim2.new(0, 115, 0, 210), RightPanel, function()
+    Settings.FovRadius = Settings.FovRadius + 15
+    FovLabel.Text = "FOV: " .. Settings.FovRadius
+end)
+
+CreateSubButton("-", UDim2.new(0, 150, 0, 210), RightPanel, function()
+    if Settings.FovRadius > 15 then
+        Settings.FovRadius = Settings.FovRadius - 15
+        FovLabel.Text = "FOV: " .. Settings.FovRadius
+    end
+end)
+
+-- Seletor de Osso Alvo
+local BoneBtn = CreateSubButton("Alvo: Cabeça", UDim2.new(0, 10, 0, 250), RightPanel, function(b)
+    if Settings.TargetPart == "Head" then
+        Settings.TargetPart = "Torso"
+        b.Text = "Alvo: Tronco"
+    elseif Settings.TargetPart == "Torso" then
+        Settings.TargetPart = "LeftFoot"
+        b.Text = "Alvo: Pé"
+    else
+        Settings.TargetPart = "Head"
+        b.Text = "Alvo: Cabeça"
+    end
+end)
+
+-- Botões do ESP
+local EspBtn = CreateSubButton("Ativar ESP: OFF", UDim2.new(0, 200, 0, 250), RightPanel, function(b)
+    Settings.EspEnabled = not Settings.EspEnabled
+    Settings.EspBox = Settings.EspEnabled
+    Settings.EspHealth = Settings.EspEnabled
+    b.Text = Settings.EspEnabled and "Ativar ESP: ON" or "Ativar ESP: OFF"
+end)
+
+local RigBtn = CreateSubButton("Rig: R15", UDim2.new(0, 200, 0, 210), RightPanel, function(b)
+    if Settings.RigType == "R15" then
+        Settings.RigType = "R6"
+        b.Text = "Rig: R6"
+    else
+        Settings.RigType = "R15"
+        b.Text = "Rig: R15"
+    end
+end)
